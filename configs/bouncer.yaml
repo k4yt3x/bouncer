@@ -1,0 +1,94 @@
+# Telegram Bot API token
+telegram_bot_token: YOUR_TELEGRAM_BOT_TOKEN
+
+# The LLM backend to use for generating challenges and verifying answers
+generative_ai_backend: openai
+
+# Number of seconds to wait for the user to answer the challenge
+answer_timeout: 120
+
+# Number of seconds to wait before allowing the user to retry the challenge
+retry_timeout: 600
+
+# OpenAI Settings
+openai:
+  # OpenAI API key
+  api_key: YOUR_OPENAI_API_KEY
+
+  # The model to use for generating challenges and verifying answers
+  model: gpt-4o-mini
+
+  # Additional options to pass to the model
+  options:
+    temperature: 0.8
+
+# Ollama Settings
+ollama:
+  # The model to use for generating challenges and verifying answers
+  model: qwen2.5-coder:32b
+
+  # Additional options to pass to the model
+  options:
+    temperature: 0.5
+
+# Gemini Settings
+gemini:
+  # Gemini API key
+  api_key: YOUR_GEMINI_API_KEY
+
+  # The model to use for generating challenges and verifying answers
+  model: gemini-1.5-pro
+
+  # Additional options to pass to the model
+  options:
+    temperature: 0.8
+
+# Custom messages and templates
+messages:
+  # Message to send when an internal error occurs
+  internal_error: "请求出错了，请通知管理员或稍后再试。"
+
+  # Message to send when the user requests to join a group
+  join_requested: |
+    嗨，{}！您最近申请了加入 {}。
+    在我批准您的申请之前，请先回答一个问题：
+
+    {}
+
+    请直接回复正确答案，限时 {} 秒。
+
+  # Message to send when the user answers the challenge correctly
+  correct_answer: "✅ 回答正确！您的入群申请被批准了。欢迎！"
+
+  # Message to send when the user answers the challenge incorrectly
+  wrong_answer: "❌ 回答错误！您的入群请求已被拒绝。请在 {} 秒后重试。"
+
+  # Message to send when the user takes too long to answer the challenge
+  timed_out: "⏰ 回答超时！您的入群请求已被拒绝。请在 {} 秒后重试。"
+
+  # Message to send when the user retries the challenge too soon
+  retry_timer: "请等待 {} 秒后再次尝试申请入群，剩余 {} 秒。"
+
+  # Message to send when the user has no challenge to answer
+  no_challenge: "您目前没有需要回答的问题。"
+
+prompts:
+  # Template for generating a challenge with the LLM
+  generate_challenge: |
+    你需要为 Telegram 群组入群生成一个题目。
+    为这个话题生成一个简短的、高难度的题目：{}
+
+    参考以下案例生成类似的问题，遵循类似的格式和难度，仅写出问题，不要提供解释和答案：
+    例1：当信号被电离层反射回地球时，这种现象叫什么？
+    例2：你在你的 2 瓦手持电台上增加了一个 9 dB 增益的放大器。请问组合后的输出功率是多少？
+
+  # Template for verifying an answer with the LLM
+  verify_answer: |
+    校验这个问题的答案，问题是：\"{}\"
+
+    <答案>
+    {}
+    </答案>
+
+    答案不一定需要面面俱到，但是不应该有事实错误。
+    如果你认为答案正确，仅回复文本verification_passed，否则回复答案错误的理由。"
