@@ -1,0 +1,24 @@
+[project]
+name = "bouncer"
+description = "Telegram bot to manage group chat user join requests"
+authors = [{ name = "k4yt3x", email = "i@k4yt3x.com" }]
+dependencies = ["python-telegram-bot>=21.10", "loguru>=0.7.3", "pyyaml>=6.0.2", "ollama>=0.4.7", "google-genai>=1.2.0"]
+requires-python = ">=3.9"
+readme = "README.md"
+license = { text = "LicenseRef-Proprietary" }
+dynamic = ["version"]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.isort]
+profile = "black"
+
+[tool.pdm]
+distribution = true
+
+[tool.pdm.version]
+source = "file"
+path = "bouncer/__init__.py"
+
