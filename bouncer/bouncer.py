@@ -70,6 +70,7 @@ class Bouncer:
         self.retry_timeout = retry_timeout
         self.generative_ai = generative_ai
         self.database = DatabaseManager()
+        self.application.add_error_handler(self._error_handler)
         self.application.add_handler(ChatJoinRequestHandler(self._send_challenge))
         self.application.add_handler(
             MessageHandler(
@@ -82,6 +83,9 @@ class Bouncer:
         logger.info("Starting Bouncer polling loop")
         self.application.run_polling()
         return 1
+
+    async def _error_handler(self, _: Update, context: CallbackContext):
+        logger.error(f"An error occurred: {context.error}", exc_info=True)
 
     async def _send_challenge(self, update: Update, context: CallbackContext):
         """Sends a challenge question to the user when they request to join."""
