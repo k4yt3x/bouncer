@@ -2,7 +2,7 @@
 name = "bouncer"
 description = "Telegram bot to manage group chat user join requests"
 authors = [{ name = "k4yt3x", email = "i@k4yt3x.com" }]
-dependencies = ["python-telegram-bot>=21.10", "loguru>=0.7.3", "pyyaml>=6.0.2", "ollama>=0.4.7", "google-genai>=1.2.0"]
+dependencies = ["python-telegram-bot>=21.10", "loguru>=0.7.3", "pyyaml>=6.0.2", "ollama>=0.4.7", "google-genai>=1.2.0", "sqlalchemy>=2.0.38"]
 requires-python = ">=3.9"
 readme = "README.md"
 license = { text = "LicenseRef-Proprietary" }
@@ -22,3 +22,9 @@ distribution = true
 source = "file"
 path = "bouncer/__init__.py"
 
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+    "Faker>=36.1.1",
+]
