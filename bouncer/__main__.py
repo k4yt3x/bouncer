@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-c",
         "--config",
-        default="configs/bouncer.yaml",
+        default="bouncer.yaml",
         help="Path to the Bouncer configuration file",
     )
 
@@ -153,6 +153,9 @@ def main() -> int:
             )
             bot_messages.timed_out = messages_config.get(
                 "timed_out", bot_messages.timed_out
+            )
+            bot_messages.ongoing_challenge = messages_config.get(
+                "ongoing_challenge", bot_messages.ongoing_challenge
             )
             bot_messages.no_challenge = messages_config.get(
                 "no_challenge", bot_messages.no_challenge

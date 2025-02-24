@@ -6,6 +6,7 @@ import contextlib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+import telegram
 from loguru import logger
 from telegram import Bot, Update
 from telegram.ext import (
@@ -40,6 +41,9 @@ class BotMessages:
     )
     retry_timer: str = (
         "Please wait for {} seconds before trying to join the group again."
+    )
+    ongoing_challenge: str = (
+        "You have an ongoing join request. Please complete it first."
     )
     no_challenge: str = "I don't have any active challenges for you."
 
@@ -95,7 +99,7 @@ class Bouncer:
 
         user_id = chat_join_request.from_user.id
         chat_id = chat_join_request.chat.id
-        group_name = chat_join_request.chat.title
+        chat_title = chat_join_request.chat.title
         timestamp = datetime.now(timezone.utc).timestamp()
 
         full_name = chat_join_request.from_user.first_name
@@ -104,7 +108,7 @@ class Bouncer:
 
         if not self.database.is_group_allowed(chat_id):
             logger.warning(
-                f"Ignored join request: Group {group_name} ({chat_id}) is not allowed"
+                f"Ignored join request: Group {chat_title} ({chat_id}) is not allowed"
             )
             return
 
@@ -118,6 +122,9 @@ class Bouncer:
                 logger.warning(
                     f"Ignored join request: User {full_name} "
                     "is already in the pending list"
+                )
+                await context.bot.send_message(
+                    chat_id=user_id, text=self.bot_messages.ongoing_challenge
                 )
                 return
 
@@ -151,7 +158,7 @@ class Bouncer:
             group_topic = self.database.get_group_topic(chat_id)
             if group_topic is None:
                 logger.error(
-                    f"Ignored join request: Group {group_name} ({chat_id}) "
+                    f"Ignored join request: Group {chat_title} ({chat_id}) "
                     "has no topic set"
                 )
                 return
@@ -166,22 +173,31 @@ class Bouncer:
             )
 
             # Send the challenge to the user
-            await context.bot.send_message(
-                chat_id=user_id,
-                text=self.bot_messages.join_requested.format(
-                    full_name, group_name, challenge, self.answer_timeout
-                ),
-            )
+            try:
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=self.bot_messages.join_requested.format(
+                        full_name, chat_title, challenge, self.answer_timeout
+                    ),
+                )
+            except telegram.error.Forbidden:
+                logger.warning(f"Bot is blocked by the user {user_id}")
 
             self.database.store_join_attempt(
-                int(datetime.now(timezone.utc).timestamp()), user_id
+                int(datetime.now(timezone.utc).timestamp()), user_id, full_name
             )
 
             asyncio.create_task(
                 self._timeout_user(
-                    chat_id, user_id, full_name, int(timestamp), context.bot
+                    chat_id,
+                    str(chat_title),
+                    user_id,
+                    full_name,
+                    int(timestamp),
+                    context.bot,
                 )
             )
+
         except Exception as e:  # pylint: disable=broad-except
             logger.exception(e)
 
@@ -192,21 +208,40 @@ class Bouncer:
                 )
 
     async def _timeout_user(
-        self, chat_id: int, user_id: int, full_name: str, timestamp: int, bot: Bot
+        self,
+        chat_id: int,
+        chat_title: str,
+        user_id: int,
+        full_name: str,
+        timestamp: int,
+        bot: Bot,
     ):
         await asyncio.sleep(self.answer_timeout)
         pending_user = self.database.get_pending_user(user_id)
-        if pending_user and int(pending_user[0].timestamp()) == timestamp:
-            logger.warning(
-                f"User {full_name} ({user_id}) timed out after "
-                f"{self.answer_timeout} seconds"
-            )
-            self.database.remove_pending_user(chat_id, user_id)
-            await bot.decline_chat_join_request(chat_id=chat_id, user_id=user_id)
-            await bot.send_message(
-                chat_id=user_id,
-                text=self.bot_messages.timed_out.format(self.retry_timeout),
-            )
+        if pending_user is not None:
+            ts, chat_id, user_id, challenge = pending_user
+            if int(ts.timestamp()) == timestamp:
+                logger.warning(
+                    f"User {full_name} ({user_id}) timed out after "
+                    f"{self.answer_timeout} seconds"
+                )
+                self.database.remove_pending_user(chat_id, user_id)
+                self.database.store_verification_attempt(
+                    timestamp,
+                    chat_id,
+                    chat_title,
+                    user_id,
+                    full_name,
+                    challenge,
+                    "",
+                    "declined",
+                    "Timed out",
+                )
+                await bot.decline_chat_join_request(chat_id=chat_id, user_id=user_id)
+                await bot.send_message(
+                    chat_id=user_id,
+                    text=self.bot_messages.timed_out.format(self.retry_timeout),
+                )
 
     async def _check_answer(self, update: Update, context: CallbackContext):
         """Checks if the user's response is correct."""
@@ -220,6 +255,7 @@ class Bouncer:
 
         user_id = from_user.id
         full_name = from_user.full_name
+        chat_title = message.chat.title
         answer = message.text.strip()
 
         logger.debug(f"User {full_name} ({user_id}) answered: {answer}")
@@ -247,18 +283,36 @@ class Bouncer:
                 await message.reply_text(self.bot_messages.no_challenge)
                 return
 
-            if await self.verify_answer(challenge, answer):
+            # Verify the answer through the LLM
+            passed, reason = await self.verify_answer(challenge, answer)
+
+            if passed is True:
+                verdict = "accepted"
                 await context.bot.approve_chat_join_request(
                     chat_id=chat_id, user_id=user_id
                 )
                 await message.reply_text(self.bot_messages.correct_answer)
             else:
+                verdict = "declined"
                 await context.bot.decline_chat_join_request(
                     chat_id=chat_id, user_id=user_id
                 )
                 await message.reply_text(
                     self.bot_messages.wrong_answer.format(self.retry_timeout)
                 )
+
+            # Store verification attempt
+            self.database.store_verification_attempt(
+                int(timestamp.timestamp()),
+                chat_id,
+                str(chat_title),
+                user_id,
+                full_name,
+                challenge,
+                answer,
+                verdict,
+                reason,
+            )
 
             # Remove user from pending list
             self.database.remove_pending_user(chat_id, user_id)
@@ -272,11 +326,11 @@ class Bouncer:
         logger.debug(f"Challenge generation response: {response}")
         return response
 
-    async def verify_answer(self, challenge: str, answer: str) -> bool:
+    async def verify_answer(self, challenge: str, answer: str) -> tuple[bool, str]:
         response = await self.generative_ai.generate(
             self.prompt_templates.verify_answer.format(challenge, answer)
         )
         logger.debug(f"Challenge verification response: {response}")
         if response == "verification_passed":
-            return True
-        return False
+            return True, ""
+        return False, response

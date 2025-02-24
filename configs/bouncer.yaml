@@ -5,10 +5,10 @@ telegram_bot_token: YOUR_TELEGRAM_BOT_TOKEN
 generative_ai_backend: openai
 
 # Number of seconds to wait for the user to answer the challenge
-answer_timeout: 120
+answer_timeout: 60
 
 # Number of seconds to wait before allowing the user to retry the challenge
-retry_timeout: 600
+retry_timeout: 300
 
 # OpenAI Settings
 openai:
@@ -68,6 +68,9 @@ messages:
 
   # Message to send when the user retries the challenge too soon
   retry_timer: "请等待 {} 秒后再次尝试申请入群，剩余 {} 秒。"
+
+  # Message to send when the user already has an ongoing challenge to answer
+  ongoing_challenge: "您有一个未完成的加群请求，请先完成当前问题。"
 
   # Message to send when the user has no challenge to answer
   no_challenge: "您目前没有需要回答的问题。"

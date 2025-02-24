@@ -1,3 +1,7 @@
+# Bouncer local configuration files
+bouncer.yaml
+bouncer.yml
+
 # Bouncer database files
 *.db
 
