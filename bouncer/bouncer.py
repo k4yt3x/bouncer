@@ -89,7 +89,15 @@ class Bouncer:
         return 1
 
     async def _error_handler(self, _: Update, context: CallbackContext):
-        logger.error(f"An error occurred: {context.error}", exc_info=True)
+        logger.exception(context.error)
+
+    async def _safe_send_message(self, bot: telegram.Bot, *args, **kwargs):
+        try:
+            return await bot.send_message(*args, **kwargs)
+        except telegram.error.Forbidden:
+            logger.warning(f"Bot is blocked by the user {kwargs.get('chat_id')}")
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error(f"Failed to send message: {e}")
 
     async def _send_challenge(self, update: Update, context: CallbackContext):
         """Sends a challenge question to the user when they request to join."""
@@ -123,8 +131,10 @@ class Bouncer:
                     f"Ignored join request: User {full_name} "
                     "is already in the pending list"
                 )
-                await context.bot.send_message(
-                    chat_id=user_id, text=self.bot_messages.ongoing_challenge
+                await self._safe_send_message(
+                    context.bot,
+                    chat_id=user_id,
+                    text=self.bot_messages.ongoing_challenge,
                 )
                 return
 
@@ -146,7 +156,8 @@ class Bouncer:
                     await context.bot.decline_chat_join_request(
                         chat_id=chat_id, user_id=user_id
                     )
-                    await context.bot.send_message(
+                    await self._safe_send_message(
+                        context.bot,
                         chat_id=user_id,
                         text=self.bot_messages.retry_timer.format(
                             self.retry_timeout,
@@ -174,7 +185,8 @@ class Bouncer:
 
             # Send the challenge to the user
             try:
-                await context.bot.send_message(
+                await self._safe_send_message(
+                    context.bot,
                     chat_id=user_id,
                     text=self.bot_messages.join_requested.format(
                         full_name, chat_title, challenge, self.answer_timeout
@@ -202,7 +214,8 @@ class Bouncer:
             logger.exception(e)
 
             with contextlib.suppress(Exception):
-                await context.bot.send_message(
+                await self._safe_send_message(
+                    context.bot,
                     chat_id=user_id,
                     text=self.bot_messages.internal_error,
                 )
@@ -238,7 +251,8 @@ class Bouncer:
                     "Timed out",
                 )
                 await bot.decline_chat_join_request(chat_id=chat_id, user_id=user_id)
-                await bot.send_message(
+                await self._safe_send_message(
+                    bot,
                     chat_id=user_id,
                     text=self.bot_messages.timed_out.format(self.retry_timeout),
                 )
