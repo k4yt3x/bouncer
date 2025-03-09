@@ -4,6 +4,7 @@ bouncer.yml
 
 # Bouncer database files
 *.db
+*.db.bak
 
 # PDM
 .pdm.toml
