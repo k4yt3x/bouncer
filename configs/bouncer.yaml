@@ -46,52 +46,52 @@ gemini:
 # Custom messages and templates
 messages:
   # Message to send when an internal error occurs
-  internal_error: "请求出错了，请通知管理员或稍后再试。"
+  internal_error: "Something went wrong with the request. Please notify an admin or try again later."
 
   # Message to send when the user requests to join a group
   join_requested: |
-    嗨，{}！您最近申请了加入 {}。
-    在我批准您的申请之前，请先回答一个问题：
+    Hi, {}! You recently requested to join {}.
+    Before I approve your request, please answer this question:
 
     {}
 
-    请直接回复正确答案，限时 {} 秒。
+    Please reply directly with the correct answer. You have {} seconds.
 
   # Message to send when the user answers the challenge correctly
-  correct_answer: "✅ 回答正确！您的入群申请被批准了。欢迎！"
+  correct_answer: "✅ Correct answer! Your join request has been approved. Welcome!"
 
   # Message to send when the user answers the challenge incorrectly
-  wrong_answer: "❌ 回答错误！您的入群请求已被拒绝。请在 {} 秒后重试。"
+  wrong_answer: "❌ Wrong answer! Your join request has been denied. Please try again in {} seconds."
 
   # Message to send when the user takes too long to answer the challenge
-  timed_out: "⏰ 回答超时！您的入群请求已被拒绝。请在 {} 秒后重试。"
+  timed_out: "⏰ Time's up! Your join request has been denied. Please try again in {} seconds."
 
   # Message to send when the user retries the challenge too soon
-  retry_timer: "请等待 {} 秒后再次尝试申请入群，剩余 {} 秒。"
+  retry_timer: "Please wait {} seconds before requesting to join again. {} seconds remaining."
 
   # Message to send when the user already has an ongoing challenge to answer
-  ongoing_challenge: "您有一个未完成的加群请求，请先完成当前问题。"
+  ongoing_challenge: "You have an unfinished join request. Please complete your current question first."
 
   # Message to send when the user has no challenge to answer
-  no_challenge: "您目前没有需要回答的问题。"
+  no_challenge: "You currently don't have any questions to answer."
 
 prompts:
   # Template for generating a challenge with the LLM
   generate_challenge: |
-    你需要为 Telegram 群组入群生成一个题目。
-    为这个话题生成一个简短的、高难度的题目：{}
+    You need to create a challenge question for Telegram group admission.
+    Generate a short, difficult question about this topic: {}
 
-    参考以下案例生成类似的问题，遵循类似的格式和难度，仅写出问题，不要提供解释和答案：
-    例1：当信号被电离层反射回地球时，这种现象叫什么？
-    例2：你在你的 2 瓦手持电台上增加了一个 9 dB 增益的放大器。请问组合后的输出功率是多少？
+    Use these examples to create a similar question, following the same format and difficulty level. Only write the question, don't provide explanations or answers:
+    Example 1: What is the phenomenon called when signals are reflected back to Earth by the ionosphere?
+    Example 2: If you add a 9 dB gain amplifier to your 2-watt handheld radio, what would be the combined output power?
 
   # Template for verifying an answer with the LLM
   verify_answer: |
-    校验这个问题的答案，问题是：\"{}\"
+    Verify the answer to this question: \"{}\"
 
-    <答案>
+    <Answer>
     {}
-    </答案>
+    </Answer>
 
-    答案不一定需要面面俱到，但是不应该有事实错误。
-    如果你认为答案正确，仅回复文本verification_passed，否则回复答案错误的理由。"
+    The answer doesn't need to be comprehensive, but it shouldn't contain factual errors.
+    If you believe the answer is correct, only reply with verification_passed, otherwise explain why the answer is wrong."
