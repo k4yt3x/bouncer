@@ -16,11 +16,11 @@ openai:
   api_key: YOUR_OPENAI_API_KEY
 
   # The model to use for generating challenges and verifying answers
-  model: gpt-4o-mini
+  model: gpt-4o
 
   # Additional options to pass to the model
   options:
-    temperature: 0.8
+    temperature: 0.4
 
 # Ollama Settings
 ollama:
@@ -29,7 +29,7 @@ ollama:
 
   # Additional options to pass to the model
   options:
-    temperature: 0.5
+    temperature: 0.4
 
 # Gemini Settings
 gemini:
@@ -41,12 +41,12 @@ gemini:
 
   # Additional options to pass to the model
   options:
-    temperature: 0.8
+    temperature: 0.4
 
 # Custom messages and templates
 messages:
   # Message to send when an internal error occurs
-  internal_error: "Something went wrong with the request. Please notify an admin or try again later."
+  internal_error: "An internal error occurred. Please notify the admin or try again later."
 
   # Message to send when the user requests to join a group
   join_requested: |
@@ -94,4 +94,4 @@ prompts:
     </Answer>
 
     The answer doesn't need to be comprehensive, but it shouldn't contain factual errors.
-    If you believe the answer is correct, only reply with verification_passed, otherwise explain why the answer is wrong."
+    If you believe the answer is correct, only reply with `{}`, otherwise explain why the answer is wrong."

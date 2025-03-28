@@ -3,12 +3,13 @@
 
 import asyncio
 import contextlib
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
 import telegram
 from loguru import logger
-from telegram import Bot, Update
+from telegram import Bot, ChatMember, Update
 from telegram.ext import (
     ApplicationBuilder,
     CallbackContext,
@@ -16,6 +17,7 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
+from telegram.ext._handlers.commandhandler import CommandHandler
 
 from .database_manager import DatabaseManager
 from .generative_ai import GenerativeAI
@@ -23,38 +25,20 @@ from .generative_ai import GenerativeAI
 
 @dataclass
 class BotMessages:
-    internal_error: str = (
-        "An internal error occurred. Please notify the admin or try again later."
-    )
-    join_requested: str = (
-        "Hi {}! You have requested to join {}.\nBefore I can approve your request, "
-        "please answer this question:\n\n{}\n\nReply with the correct answer. "
-        "You have {} seconds."
-    )
-    correct_answer: str = "✅ Correct! You have been approved to join the group."
-    wrong_answer: str = (
-        "❌ Wrong answer! Your request has been declined. "
-        "Please try again in {} seconds."
-    )
-    timed_out: str = (
-        "⏰ Your challenge attempt has timed out. Please try again in {} seconds."
-    )
-    retry_timer: str = (
-        "Please wait for {} seconds before trying to join the group again."
-    )
-    ongoing_challenge: str = (
-        "You have an ongoing join request. Please complete it first."
-    )
-    no_challenge: str = "I don't have any active challenges for you."
+    internal_error: str
+    join_requested: str
+    correct_answer: str
+    wrong_answer: str
+    timed_out: str
+    retry_timer: str
+    ongoing_challenge: str
+    no_challenge: str
 
 
 @dataclass
 class PromptTemplates:
-    generate_challenge: str = "Generate a challenge for the topic: {}."
-    verify_answer: str = (
-        'Given this challenge: "{}". Is this a valid challenge? '
-        'Reply either "true" or "false".'
-    )
+    generate_challenge: str
+    verify_answer: str
 
 
 class Bouncer:
@@ -75,6 +59,7 @@ class Bouncer:
         self.generative_ai = generative_ai
         self.database = DatabaseManager()
         self.application.add_error_handler(self._error_handler)
+        self.application.add_handler(CommandHandler("settopic", self.set_topic))
         self.application.add_handler(ChatJoinRequestHandler(self._send_challenge))
         self.application.add_handler(
             MessageHandler(
@@ -88,7 +73,7 @@ class Bouncer:
         self.application.run_polling()
         return 1
 
-    async def _error_handler(self, _: Update, context: CallbackContext):
+    async def _error_handler(self, _: object, context: CallbackContext):
         logger.exception(context.error)
 
     async def _safe_send_message(self, bot: telegram.Bot, *args, **kwargs):
@@ -98,6 +83,42 @@ class Bouncer:
             logger.warning(f"Bot is blocked by the user {kwargs.get('chat_id')}")
         except Exception as e:  # pylint: disable=broad-except
             logger.error(f"Failed to send message: {e}")
+
+    async def set_topic(self, update: Update, context: CallbackContext):
+        """Sets the topic of the group."""
+        message = update.message
+        if message is None or message.text is None:
+            return
+
+        chat_id = message.chat_id
+        chat_title = message.chat.title
+        from_user = message.from_user
+
+        if from_user is None:
+            return
+
+        if not self.database.is_group_allowed(chat_id):
+            logger.warning(
+                f"Ignored topic setting: Group {chat_title} ({chat_id}) is not allowed"
+            )
+            return
+
+        member = await context.bot.get_chat_member(chat_id, from_user.id)
+        if not member.status in [ChatMember.ADMINISTRATOR, ChatMember.OWNER]:
+            logger.warning(
+                f"Ignored topic setting: User {from_user.full_name} ({from_user.id}) is not an admin"
+            )
+            return
+
+        try:
+            topic = message.text.split(" ", 1)[1].strip()
+        except IndexError:
+            await message.reply_text("Usage: /settopic <topic>")
+            return
+
+        self.database.set_group_topic(chat_id, topic)
+        logger.info(f"Set topic for group {chat_title} ({chat_id}): {topic}")
+        await message.reply_text(f"Set group topic to: {topic}")
 
     async def _send_challenge(self, update: Update, context: CallbackContext):
         """Sends a challenge question to the user when they request to join."""
@@ -341,10 +362,13 @@ class Bouncer:
         return response
 
     async def verify_answer(self, challenge: str, answer: str) -> tuple[bool, str]:
+        verification_token = str(uuid.uuid4())
         response = await self.generative_ai.generate(
-            self.prompt_templates.verify_answer.format(challenge, answer)
+            self.prompt_templates.verify_answer.format(
+                challenge, answer, verification_token
+            )
         )
         logger.debug(f"Challenge verification response: {response}")
-        if response == "verification_passed":
+        if response == verification_token:
             return True, ""
         return False, response

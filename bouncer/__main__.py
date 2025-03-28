@@ -135,45 +135,41 @@ def main() -> int:
         logger.error(f"Unsupported generative AI backend: {generative_ai_backend}")
         return 1
 
-    bot_messages = BotMessages()
-    if bouncer_config is not None and bouncer_config.get("messages") is not None:
-        messages_config = bouncer_config.get("messages")
-        if isinstance(messages_config, dict):
-            bot_messages.internal_error = messages_config.get(
-                "internal_error", bot_messages.internal_error
-            )
-            bot_messages.join_requested = messages_config.get(
-                "join_requested", bot_messages.join_requested
-            )
-            bot_messages.correct_answer = messages_config.get(
-                "correct_answer", bot_messages.correct_answer
-            )
-            bot_messages.wrong_answer = messages_config.get(
-                "wrong_answer", bot_messages.wrong_answer
-            )
-            bot_messages.timed_out = messages_config.get(
-                "timed_out", bot_messages.timed_out
-            )
-            bot_messages.ongoing_challenge = messages_config.get(
-                "ongoing_challenge", bot_messages.ongoing_challenge
-            )
-            bot_messages.no_challenge = messages_config.get(
-                "no_challenge", bot_messages.no_challenge
-            )
-            bot_messages.retry_timer = messages_config.get(
-                "retry_timer", bot_messages.retry_timer
-            )
+    messages_config = bouncer_config.get("messages")
+    if messages_config is None or not isinstance(messages_config, dict):
+        logger.error(
+            "Messages configuration not found or invalid in the configuration file"
+        )
+        return 1
 
-    prompt_templates = PromptTemplates()
-    if bouncer_config is not None and bouncer_config.get("prompts") is not None:
-        prompts_config = bouncer_config.get("prompts")
-        if isinstance(prompts_config, dict):
-            prompt_templates.generate_challenge = prompts_config.get(
-                "generate_challenge", prompt_templates.generate_challenge
-            )
-            prompt_templates.verify_answer = prompts_config.get(
-                "verify_answer", prompt_templates.verify_answer
-            )
+    bot_messages = BotMessages(
+        internal_error=messages_config["internal_error"],
+        join_requested=messages_config["join_requested"],
+        correct_answer=messages_config["correct_answer"],
+        wrong_answer=messages_config["wrong_answer"],
+        timed_out=messages_config["timed_out"],
+        ongoing_challenge=messages_config["ongoing_challenge"],
+        no_challenge=messages_config["no_challenge"],
+        retry_timer=messages_config["retry_timer"],
+    )
+
+    # Verify all message fields are populated
+    for field_name, field_value in vars(bot_messages).items():
+        if field_value is None:
+            logger.error(f"Required message '{field_name}' not found in configuration")
+            return 1
+
+    prompts_config = bouncer_config.get("prompts")
+    if prompts_config is None or not isinstance(prompts_config, dict):
+        logger.error(
+            "Prompts configuration not found or invalid in the configuration file"
+        )
+        return 1
+
+    prompt_templates = PromptTemplates(
+        generate_challenge=prompts_config["generate_challenge"],
+        verify_answer=prompts_config["verify_answer"],
+    )
 
     answer_timeout = bouncer_config.get("answer_timeout", 120)
     retry_timeout = bouncer_config.get("retry_timeout", 600)
