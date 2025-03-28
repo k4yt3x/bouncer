@@ -2,6 +2,10 @@
 
 Bouncer is an LLM-powered Telegram bot designed to verify and approve group chat join requests by generating and validating topic-based questions.
 
+<p align="center">
+   <img src="https://github.com/user-attachments/assets/4b7ef412-8a70-4db2-ab94-ddb7bc8c4af7"/>
+</p>
+
 ## Methodology
 
 This bot uses Telegram Bot API 5.4's [approveChatJoinRequest](https://core.telegram.org/bots/api#approvechatjoinrequest) and [declineChatJoinRequest](https://core.telegram.org/bots/api#declinechatjoinrequest) methods to approve or reject join requests. When a user requests to join the group, the bot proactively sends them a topic-based question. If they answer correctly, their request is approved.
