@@ -29,7 +29,7 @@ You will first need to make a copy of the `configs/bouncer.example.yaml` file an
 docker run -d --name bouncer \
   -v $PWD/bouncer.yaml:/data/bouncer.yaml \
   -v $PWD/bouncer.db:/data/bouncer.db \
-  ghcr.io/k4yt3x/bouncer:0.1.0
+  ghcr.io/k4yt3x/bouncer:$TAG
 ```
 
 ### Option 2: Without Docker
