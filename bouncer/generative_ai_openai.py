@@ -25,6 +25,6 @@ class OpenAIGenerativeAI(GenerativeAI):
             or len(response.choices) == 0
             or response.choices[0].message.content is None
         ):
-            raise GenerationError("Gemini returned empty text")
+            raise GenerationError("OpenAI returned empty text")
 
         return response.choices[0].message.content
