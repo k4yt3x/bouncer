@@ -1,0 +1,38 @@
+start_button = "开始验证"
+
+welcome = """
+{user} 您好！您刚申请加入 {group}。
+请在 {minutes} 分钟内点击下方按钮开始验证。
+"""
+
+welcome_no_group_name = """
+{user} 您好！我们已收到您的入群申请。
+请在 {minutes} 分钟内点击下方按钮开始验证。
+"""
+
+generating_question = "正在为您生成验证问题，请稍候……"
+generating_button = "⏳ 生成中……"
+
+question_intro = "请在 {minutes} 分钟内回答以下问题："
+
+approved = "回答正确，您已通过验证，欢迎加入！"
+
+rejected_wrong = """
+很抱歉，您的回答有误，入群申请已被拒绝。
+请在 {minutes} 分钟后重新申请。
+"""
+
+rejected_timeout = """
+您未能在规定时间内作答，入群申请已被拒绝。
+请在 {minutes} 分钟后重新申请。
+"""
+
+rejected_llm_error = """
+验证过程中出现错误，入群申请已被拒绝。
+请稍后重试。
+"""
+
+cooldown_notice = """
+您刚刚提交过入群申请，暂时无法重复申请。
+请在 {minutes} 分钟后再试。
+"""

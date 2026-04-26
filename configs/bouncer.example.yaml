@@ -1,97 +1,58 @@
-# Telegram Bot API token
-telegram_bot_token: YOUR_TELEGRAM_BOT_TOKEN
+# Bouncer example configuration.
+#
+# Copy this file to `bouncer.yaml` (or point --config at it), then fill in the
+# required secrets and group ids before starting Bouncer.
 
-# The LLM backend to use for generating challenges and verifying answers
-generative_ai_backend: openai
+telegram:
+    # Obtain a bot token from @BotFather.
+    bot_token: "REPLACE_ME_WITH_TELEGRAM_BOT_TOKEN"
 
-# Number of seconds to wait for the user to answer the challenge
-answer_timeout: 60
-
-# Number of seconds to wait before allowing the user to retry the challenge
-retry_timeout: 300
-
-# OpenAI Settings
-openai:
-  # OpenAI API key
-  api_key: YOUR_OPENAI_API_KEY
-
-  # The model to use for generating challenges and verifying answers
-  model: gpt-4o
-
-  # Additional options to pass to the model
-  options:
+llm:
+    # Any OpenAI-compatible endpoint works. Leave as-is for hosted OpenAI.
+    base_url: "https://api.openai.com/v1"
+    api_key: "REPLACE_ME_WITH_OPENAI_API_KEY"
+    model: "gpt-5.3-chat"
     temperature: 0.4
+    # max_tokens: 512
+    request_timeout_secs: 30
+    # How many recently-asked questions per group to feed back to the LLM
+    # as a "do not repeat" list. 0 disables the dedup nudge entirely.
+    recent_question_window: 20
 
-# Ollama Settings
-ollama:
-  # The model to use for generating challenges and verifying answers
-  model: qwen2.5-coder:32b
+timeouts:
+    # How long after the join request the user has to tap the "Start" button.
+    button_press_secs: 120
+    # How long the user has to send an answer after the question is delivered.
+    answer_submission_secs: 600
 
-  # Additional options to pass to the model
-  options:
-    temperature: 0.4
+cooldown:
+    # Time before a user whose verification failed can try again.
+    retry_after_secs: 3600
 
-# Gemini Settings
-gemini:
-  # Gemini API key
-  api_key: YOUR_GEMINI_API_KEY
+i18n:
+    # Built-in locales: "en", "zh-CN". Override per group with `locale:` below.
+    default_locale: en
 
-  # The model to use for generating challenges and verifying answers
-  model: gemini-1.5-pro
+groups:
+    # Enroll each group Bouncer should gate. Groups not listed here are ignored,
+    # leaving join requests to be handled by human admins. Group ids are negative
+    # integers for supergroups; you can find yours by temporarily adding
+    # @getidsbot (or similar) to the group.
+    # hiking
+    - id: -1001234567890
+      # Set to false to temporarily silence Bouncer for this group without
+      # removing it from the config. Defaults to true.
+      enabled: true
+      # locale: zh-CN
+      question_prompt: |
+          Generate ONE short question about hiking, trail safety, or outdoor
+          navigation. The question should be answerable in one or two sentences by
+          any real hiker, without requiring lookup. Output only the question.
 
-  # Additional options to pass to the model
-  options:
-    temperature: 0.4
-
-# Custom messages and templates
-messages:
-  # Message to send when an internal error occurs
-  internal_error: "An internal error occurred. Please notify the admin or try again later."
-
-  # Message to send when the user requests to join a group
-  join_requested: |
-    Hi, {}! You recently requested to join {}.
-    Before I approve your request, please answer this question:
-
-    {}
-
-    Please reply directly with the correct answer. You have {} seconds.
-
-  # Message to send when the user answers the challenge correctly
-  correct_answer: "✅ Correct answer! Your join request has been approved. Welcome!"
-
-  # Message to send when the user answers the challenge incorrectly
-  wrong_answer: "❌ Wrong answer! Your join request has been denied. Please try again in {} seconds."
-
-  # Message to send when the user takes too long to answer the challenge
-  timed_out: "⏰ Time's up! Your join request has been denied. Please try again in {} seconds."
-
-  # Message to send when the user retries the challenge too soon
-  retry_timer: "Please wait {} seconds before requesting to join again. {} seconds remaining."
-
-  # Message to send when the user already has an ongoing challenge to answer
-  ongoing_challenge: "You have an unfinished join request. Please complete your current question first."
-
-  # Message to send when the user has no challenge to answer
-  no_challenge: "You currently don't have any questions to answer."
-
-prompts:
-  # Template for generating a challenge with the LLM
-  generate_challenge: |
-    You need to create a challenge question for Telegram group admission.
-    Generate a short, difficult question about this topic: {}
-
-    Use these examples to create a similar question, following the same format and difficulty level. Only write the question, don't provide explanations or answers:
-    Example 1: What is the phenomenon called when signals are reflected back to Earth by the ionosphere?
-    Example 2: If you add a 9 dB gain amplifier to your 2-watt handheld radio, what would be the combined output power?
-
-  # Template for verifying an answer with the LLM
-  verify_answer: |
-    Verify the answer to this question: \"{}\"
-
-    <Answer>
-    {}
-    </Answer>
-
-    The answer doesn't need to be comprehensive, but it shouldn't contain factual errors.
-    If you believe the answer is correct, only reply with `{}`, otherwise explain why the answer is wrong."
+    # amateur radio
+    # - id: -1009876543210
+    #   enabled: true
+    #   question_prompt: |
+    #     Generate ONE short question covering amateur radio operation,
+    #     regulations (FCC Part 97 in the US), or basic RF theory. Output only
+    #     the question.

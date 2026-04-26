@@ -1,0 +1,38 @@
+start_button = "Start Verification"
+
+welcome = """
+Hi {user}! You've requested to join {group}.
+To verify you're human, press the button below within {minutes} minutes.
+"""
+
+welcome_no_group_name = """
+Hi {user}! You've requested to join a Bouncer-gated group.
+To verify you're human, press the button below within {minutes} minutes.
+"""
+
+generating_question = "Preparing your verification question, please wait..."
+generating_button = "⏳ Generating question..."
+
+question_intro = "Please answer the following question within {minutes} minutes:"
+
+approved = "Correct. You've been approved — welcome!"
+
+rejected_wrong = """
+Sorry, that answer doesn't look right. Your join request has been declined.
+You may request to join again after {minutes} minutes.
+"""
+
+rejected_timeout = """
+You didn't respond in time. Your join request has been declined.
+You may request to join again after {minutes} minutes.
+"""
+
+rejected_llm_error = """
+Something went wrong while processing your verification.
+Your join request has been declined. Please try again later.
+"""
+
+cooldown_notice = """
+You requested to join recently and are in cool-down.
+Please wait {minutes} more minutes before requesting again.
+"""
