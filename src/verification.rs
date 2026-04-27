@@ -11,7 +11,7 @@ use teloxide::types::{
     Recipient, User, UserId,
 };
 use tokio::sync::Mutex;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::config::Config;
 use crate::error::Result;
@@ -102,7 +102,7 @@ impl Engine {
         let user_id = user.id.0 as i64;
         let display_name_str = display_name(&user);
         let username_str = user.username.clone().unwrap_or_default();
-        info!(
+        debug!(
             chat_id,
             chat_title = chat_title.as_deref().unwrap_or(""),
             user_id,
@@ -182,7 +182,7 @@ impl Engine {
             );
         }
 
-        info!(
+        debug!(
             chat_id,
             user_id,
             display_name = display_name_str.as_str(),
@@ -475,6 +475,7 @@ impl Engine {
             display_name = dn.as_str(),
             username = un.as_str(),
             answer_len = answer.chars().count(),
+            answer = truncate_for_log(answer, 500).as_str(),
             "answer received; verifying"
         );
         self.clear_timeout(chat_id, user_id).await;
@@ -607,15 +608,29 @@ impl Engine {
                 Outcome::RejectedNoAnswer
             }
         };
-        info!(
-            chat_id,
-            user_id,
-            display_name = row.display_name.as_deref().unwrap_or(""),
-            username = row.username.as_deref().unwrap_or(""),
-            stage = ?row.stage,
-            ?outcome,
-            "verification timed out"
-        );
+        // Treat the no-button-press timeout as background spam-bot noise so
+        // it doesn't drown out logs for users who actually engage.
+        if matches!(outcome, Outcome::RejectedNoButton) {
+            debug!(
+                chat_id,
+                user_id,
+                display_name = row.display_name.as_deref().unwrap_or(""),
+                username = row.username.as_deref().unwrap_or(""),
+                stage = ?row.stage,
+                ?outcome,
+                "verification timed out"
+            );
+        } else {
+            info!(
+                chat_id,
+                user_id,
+                display_name = row.display_name.as_deref().unwrap_or(""),
+                username = row.username.as_deref().unwrap_or(""),
+                stage = ?row.stage,
+                ?outcome,
+                "verification timed out"
+            );
+        }
         self.finalize_rejection(row, outcome, None, Some("timeout".into()), Some(message))
             .await;
     }
@@ -787,15 +802,29 @@ impl Engine {
                 "decline_chat_join_request failed"
             );
         }
-        info!(
-            chat_id,
-            user_id,
-            display_name = dn.as_str(),
-            username = un.as_str(),
-            outcome = outcome.as_str(),
-            cooldown_until = cooldown,
-            "join request declined"
-        );
+        // Same shaping as fire_timeout: silence the spam-bot path so the log
+        // surfaces only declines that involve actual user engagement.
+        if matches!(outcome, Outcome::RejectedNoButton) {
+            debug!(
+                chat_id,
+                user_id,
+                display_name = dn.as_str(),
+                username = un.as_str(),
+                outcome = outcome.as_str(),
+                cooldown_until = cooldown,
+                "join request declined"
+            );
+        } else {
+            info!(
+                chat_id,
+                user_id,
+                display_name = dn.as_str(),
+                username = un.as_str(),
+                outcome = outcome.as_str(),
+                cooldown_until = cooldown,
+                "join request declined"
+            );
+        }
         self.clear_timeout(chat_id, user_id).await;
     }
 
@@ -811,7 +840,7 @@ impl Engine {
     ) {
         let dn = display_name(user);
         let un = user.username.clone().unwrap_or_default();
-        info!(
+        debug!(
             chat_id,
             user_id = user.id.0,
             display_name = dn.as_str(),
@@ -960,6 +989,21 @@ fn display_name(user: &User) -> String {
         .clone()
         .map(|u| format!("@{u}"))
         .unwrap_or_else(|| format!("user {}", user.id.0))
+}
+
+/// Trim a user-supplied string to at most `max_chars` characters for safe
+/// inclusion in log fields. Replaces newlines with spaces so the message
+/// stays on one line. Appends an ellipsis marker when truncation occurs.
+fn truncate_for_log(s: &str, max_chars: usize) -> String {
+    let mut out = String::with_capacity(s.len().min(max_chars * 4));
+    for (count, c) in s.chars().enumerate() {
+        if count >= max_chars {
+            out.push('…');
+            return out;
+        }
+        out.push(if c == '\n' || c == '\r' { ' ' } else { c });
+    }
+    out
 }
 
 fn unix_now() -> i64 {

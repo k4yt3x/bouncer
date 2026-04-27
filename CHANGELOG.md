@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Question generation feeds the last N per-group questions to the LLM as a no-repeat list.
 - INFO logs cover the full flow: join, button press, question, answer, verdict, decision, timeout.
 - Logs and audit rows now include the user's display name and `@username` alongside `user_id`.
+- Demoted spam-bot-frequent events (join request, no-button-press timeout, cool-down hits) to debug.
+- Answer-received log now includes the answer text (truncated) for at-a-glance visibility.
 
 ### Changed
 
